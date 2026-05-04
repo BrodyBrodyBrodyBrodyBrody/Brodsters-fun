@@ -1,299 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>BrodyBrodyBrodySimulator</title>
-
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-  text-align: center;
-  background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
-  color: white;
-}
-
-#loading {
-  position: fixed;
-  inset: 0;
-  background: black;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  z-index: 9999;
-  flex-direction: column;
-}
-
-button {
-  margin: 5px;
-  padding: 10px 15px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-}
-
-.tab { display: none; }
-.active { display: block; }
-
-.casinoArea { display: none; }
-
-#wheel {
-  width: 150px;
-  height: 150px;
-  margin: auto;
-  border-radius: 50%;
-  background: conic-gradient(red,yellow,green,cyan,magenta,red);
-  transition: transform 1.8s ease;
-}
-</style>
+  <title>Ball Toss Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #0f172a;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
 </head>
-
 <body>
 
-<div id="loading">
-  Loading Casino...
-  <div id="loadText">Starting...</div>
+<div id="ui">
+  <div>Combo: <span id="combo">0</span></div>
+  <div>Drag and release to throw!</div>
 </div>
 
-<h1>🎰 AAA Casino Clicker</h1>
-
-<div id="score">Clicks: 0</div>
-
-<button onclick="clicker()">CLICK</button>
-
-<hr>
-
-<button onclick="openTab('casino')">Casino</button>
-<button onclick="openTab('pets')">Pets</button>
-
-<div id="casino" class="tab active">
-
-  <h2>Casino Room</h2>
-
-  <button onclick="openGame('wheel')">Wheel</button>
-  <button onclick="openGame('coin')">Coin</button>
-  <button onclick="openGame('blackjack')">Blackjack</button>
-
-  <div id="wheel" class="casinoArea">
-    <h3>Wheel</h3>
-    <div id="wheelUI"></div>
-    <button onclick="spinWheel()">Spin (10)</button>
-    <div id="wheelLog"></div>
-  </div>
-
-  <div id="coin" class="casinoArea">
-    <h3>Coin</h3>
-    <button onclick="coinFlip()">Flip (5)</button>
-    <div id="coinLog"></div>
-  </div>
-
-  <div id="blackjack" class="casinoArea">
-    <h3>Blackjack</h3>
-
-    <div>Player: <span id="player"></span></div>
-    <div>Dealer: <span id="dealer"></span></div>
-
-    <button onclick="bjStart()">Start</button>
-    <button onclick="bjHit()">Hit</button>
-    <button onclick="bjStand()">Stand</button>
-
-    <div id="bjLog"></div>
-  </div>
-
-</div>
-
-<div id="pets" class="tab">
-  <h2>Pets</h2>
-  <p>🐶 Dog (+1/sec)</p>
-  <button onclick="buyPet(50,1)">Buy 50 clicks</button>
-
-  <p>🐱 Cat (+3/sec)</p>
-  <button onclick="buyPet(150,3)">Buy 150 clicks</button>
-</div>
+<canvas id="game"></canvas>
 
 <script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let clicks = 0;
-let pets = 0;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-let bjP = 0;
-let bjD = 0;
-let bjOn = false;
-
-const el = {
-  score: document.getElementById("score"),
-  loading: document.getElementById("loading"),
-  loadText: document.getElementById("loadText"),
-  player: document.getElementById("player"),
-  dealer: document.getElementById("dealer"),
-  wheel: document.getElementById("wheelUI"),
-  wheelLog: document.getElementById("wheelLog"),
-  coinLog: document.getElementById("coinLog"),
-  bjLog: document.getElementById("bjLog")
+let ball = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  vx: 0,
+  vy: 0,
+  r: 18
 };
 
-// SAFE SAVE
-function save(){
-  localStorage.setItem("c",clicks);
-  localStorage.setItem("p",pets);
+let gravity = 0.5;
+let friction = 0.99;
+let combo = 0;
+
+let dragging = false;
+let startX, startY;
+
+function resetBall() {
+  ball.x = canvas.width / 2;
+  ball.y = canvas.height / 2;
+  ball.vx = 0;
+  ball.vy = 0;
 }
 
-function load(){
-  clicks = Number(localStorage.getItem("c")) || 0;
-  pets = Number(localStorage.getItem("p")) || 0;
-}
+canvas.addEventListener("mousedown", (e) => {
+  dragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
+});
 
-// UPDATE SAFE
-function update(){
-  el.score.innerText = "Clicks: " + clicks;
-  save();
-}
+canvas.addEventListener("mouseup", (e) => {
+  if (!dragging) return;
+  dragging = false;
 
-// CLICK
-function clicker(){
-  clicks++;
-  update();
-}
+  let dx = e.clientX - startX;
+  let dy = e.clientY - startY;
 
-// TABS SAFE
-function openTab(id){
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
+  ball.vx = dx * 0.2;
+  ball.vy = dy * 0.2;
 
-function openGame(id){
-  document.querySelectorAll(".casinoArea").forEach(g=>g.style.display="none");
-  const e = document.getElementById(id);
-  if(e) e.style.display="block";
-}
+  combo = 0;
+  document.getElementById("combo").innerText = combo;
+});
 
-// WHEEL
-function spinWheel(){
-  if(clicks < 10) return;
+function update() {
+  if (!dragging) {
+    ball.vy += gravity;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
 
-  clicks -= 10;
+    ball.vx *= friction;
+    ball.vy *= friction;
 
-  let rot = Math.random()*720 + 360;
-  el.wheel.style.transform = "rotate("+rot+"deg)";
+    // floor
+    if (ball.y + ball.r > canvas.height) {
+      ball.y = canvas.height - ball.r;
+      ball.vy *= -0.8;
+      combo++;
+      document.getElementById("combo").innerText = combo;
+    }
 
-  setTimeout(()=>{
-    let win = [0,5,10,20,50][Math.floor(Math.random()*5)];
-    clicks += win;
+    // ceiling
+    if (ball.y - ball.r < 0) {
+      ball.y = ball.r;
+      ball.vy *= -0.8;
+    }
 
-    el.wheelLog.innerHTML = "+"+win+"<br>"+el.wheelLog.innerHTML;
+    // walls
+    if (ball.x + ball.r > canvas.width) {
+      ball.x = canvas.width - ball.r;
+      ball.vx *= -0.8;
+    }
 
-    update();
-  },1500);
-}
-
-// COIN
-function coinFlip(){
-  if(clicks < 5) return;
-
-  clicks -= 5;
-
-  let win = Math.random()<0.5;
-
-  if(win){
-    clicks += 15;
-    el.coinLog.innerHTML = "WIN +15<br>"+el.coinLog.innerHTML;
-  } else {
-    el.coinLog.innerHTML = "LOSS<br>"+el.coinLog.innerHTML;
-  }
-
-  update();
-}
-
-// BLACKJACK FIXED
-function bjStart(){
-  if(clicks < 20) return;
-
-  clicks -= 20;
-
-  bjP = r()+r();
-  bjD = r();
-
-  bjOn = true;
-
-  render();
-  check();
-  update();
-}
-
-function bjHit(){
-  if(!bjOn) return;
-
-  bjP += r();
-  render();
-  check();
-}
-
-function bjStand(){
-  if(!bjOn) return;
-
-  while(bjD < 17) bjD += r();
-
-  finish();
-}
-
-function check(){
-  if(bjP > 21){
-    log("BUST LOSE");
-    bjOn = false;
+    if (ball.x - ball.r < 0) {
+      ball.x = ball.r;
+      ball.vx *= -0.8;
+    }
   }
 }
 
-function finish(){
-  let msg;
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if(bjP <= 21 && (bjP > bjD || bjD > 21)){
-    clicks += 50;
-    msg = "WIN +50";
-  } else {
-    msg = "LOSE";
-  }
+  // ball
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fillStyle = "#38bdf8";
+  ctx.fill();
+  ctx.closePath();
 
-  log(msg);
-  bjOn = false;
+  // shadow glow
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r + 10, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(56,189,248,0.2)";
+  ctx.stroke();
+}
+
+function loop() {
   update();
+  draw();
+  requestAnimationFrame(loop);
 }
 
-function render(){
-  el.player.innerText = bjP;
-  el.dealer.innerText = bjD;
-}
-
-function log(t){
-  el.bjLog.innerHTML = t + "<br>" + el.bjLog.innerHTML;
-}
-
-function r(){
-  return Math.floor(Math.random()*10)+1;
-}
-
-// PETS
-function buyPet(cost, gain){
-  if(clicks >= cost){
-    clicks -= cost;
-    pets += gain;
-    update();
-  }
-}
-
-// AUTO PETS
-setInterval(()=>{
-  clicks += pets;
-  update();
-},1000);
-
-// INIT SAFE
-window.onload = () => {
-  load();
-  update();
-
-  el.loading.style.display = "none";
-};
-
+loop();
 </script>
 
 </body>
