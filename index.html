@@ -1,237 +1,304 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Brody Fiore Clicker</title>
+  <title>Brody Clicking Money Simulator</title>
 
   <style>
     body {
       margin: 0;
       font-family: Arial;
       text-align: center;
-      background: linear-gradient(to bottom, #4facfe, #ffffff);
+      background: linear-gradient(to bottom, #1e3c72, #2a5298);
+      color: white;
       overflow-x: hidden;
     }
 
     h1 {
-      font-size: 45px;
-      margin-top: 20px;
+      margin-top: 15px;
+      font-size: 40px;
     }
 
     #score {
-      font-size: 30px;
+      font-size: 28px;
       margin: 10px;
     }
 
     button {
       cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      margin: 5px;
+      font-size: 16px;
     }
 
     #clickButton {
-      padding: 25px 50px;
-      font-size: 28px;
-      border: none;
-      border-radius: 20px;
+      font-size: 26px;
+      padding: 20px 45px;
       background: gold;
+      color: black;
+      border-radius: 20px;
       box-shadow: 0 8px orange;
     }
 
     #clickButton:active {
-      transform: translateY(6px);
-      box-shadow: 0 2px orange;
+      transform: translateY(5px);
     }
 
-    .gameBox {
-      margin: 20px;
+    .panel {
+      margin-top: 20px;
     }
 
-    #slotButton, #coinButton, #blackjackButton, #boostButton {
-      padding: 12px 25px;
-      font-size: 18px;
-      border: none;
-      border-radius: 12px;
-      color: white;
-      margin: 5px;
+    #wheel {
+      margin: 20px auto;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: 6px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      background: conic-gradient(red, yellow, lime, cyan, magenta, red);
+      transition: transform 2s cubic-bezier(0.2, 0.9, 0.3, 1);
     }
-
-    #slotButton { background: purple; }
-    #coinButton { background: green; }
-    #blackjackButton { background: darkblue; }
-    #boostButton { background: red; }
 
     #result {
+      margin-top: 15px;
       font-size: 20px;
-      margin-top: 10px;
       min-height: 25px;
     }
 
     .particle {
       position: absolute;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
       pointer-events: none;
+    }
+
+    #blackjackBox {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid white;
+      display: inline-block;
+      border-radius: 10px;
+    }
+
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 
 <body>
 
-  <h1>🎰 Brody Clicker Casino 🎰</h1>
+<h1>🎰 Brody Casino Simulator 🎰</h1>
 
-  <div id="score">Clicks: 0</div>
+<div id="score">Clicks: 0</div>
 
-  <button id="clickButton">CLICK</button>
+<button id="clickButton">CLICK</button>
 
-  <div class="gameBox">
-    <button id="slotButton">🎰 Slot (10 clicks)</button>
-    <button id="coinButton">🪙 Coin Flip (5 clicks)</button>
-    <button id="blackjackButton">🃏 Blackjack (20 clicks)</button>
-    <button id="boostButton">⚡ Spin Boost (15 clicks)</button>
+<div class="panel">
 
-    <div id="result"></div>
+  <h2>🎡 Spin Wheel</h2>
+  <div id="wheel">?</div>
+  <button onclick="spinWheel()">SPIN (10 clicks)</button>
+
+  <h2>🪙 Coin Flip</h2>
+  <button onclick="coinFlip()">FLIP (5 clicks)</button>
+
+  <h2>🃏 Blackjack</h2>
+
+  <div id="blackjackBox">
+    <div id="bjText">Click Start</div>
+    <button onclick="startBJ()">Start</button>
+    <button onclick="hitBJ()">Hit</button>
+    <button onclick="standBJ()">Stand</button>
   </div>
 
+  <div id="result"></div>
+
+</div>
+
 <script>
+
 let clicks = 0;
 let multiplier = 1;
-let boostActive = false;
 
-const scoreText = document.getElementById("score");
+let bjPlayer = 0;
+let bjDealer = 0;
+let bjActive = false;
+
+const score = document.getElementById("score");
 const result = document.getElementById("result");
-const clickButton = document.getElementById("clickButton");
+const wheel = document.getElementById("wheel");
 
-function updateScore() {
-  scoreText.innerText = "Clicks: " + clicks;
+function update() {
+  score.innerText = "Clicks: " + clicks;
 }
 
-function particle(x, y, text) {
-  const p = document.createElement("div");
-  p.className = "particle";
-  p.innerText = text;
-  document.body.appendChild(p);
+function particles(x,y,text) {
+  for(let i=0;i<6;i++){
+    const p=document.createElement("div");
+    p.className="particle";
+    p.innerText=text;
+    document.body.appendChild(p);
 
-  let dx = (Math.random() - 0.5) * 6;
-  let dy = -Math.random() * 6;
+    let dx=(Math.random()-0.5)*8;
+    let dy=-Math.random()*6;
+    let px=x,py=y;
+    let o=1;
 
-  let opacity = 1;
+    const t=setInterval(()=>{
+      px+=dx;
+      py+=dy;
+      dy+=0.25;
+      o-=0.03;
 
-  let posX = x;
-  let posY = y;
+      p.style.left=px+"px";
+      p.style.top=py+"px";
+      p.style.opacity=o;
 
-  const interval = setInterval(() => {
-    posX += dx;
-    posY += dy;
-    dy += 0.2;
-    opacity -= 0.03;
-
-    p.style.left = posX + "px";
-    p.style.top = posY + "px";
-    p.style.opacity = opacity;
-
-    if(opacity <= 0) {
-      clearInterval(interval);
-      p.remove();
-    }
-  }, 16);
-}
-
-// CLICKER
-clickButton.onclick = (e) => {
-  clicks += multiplier;
-  updateScore();
-
-  for(let i = 0; i < 5; i++) {
-    particle(e.clientX, e.clientY, "+" + multiplier);
+      if(o<=0){clearInterval(t);p.remove();}
+    },16);
   }
+}
+
+// CLICK
+document.getElementById("clickButton").onclick = (e) => {
+  clicks += multiplier;
+  update();
+  particles(e.clientX,e.clientY,"+"+multiplier);
 };
 
-// SLOT MACHINE
-document.getElementById("slotButton").onclick = () => {
-  if(clicks < 10) return result.innerText = "Not enough clicks!";
+// SPIN WHEEL (ANIMATED)
+function spinWheel(){
+  if(clicks < 10){
+    result.innerText="Not enough clicks!";
+    return;
+  }
 
   clicks -= 10;
 
-  const symbols = ["🍒","🍋","💎","7️⃣"];
-  const a = symbols[Math.floor(Math.random()*4)];
-  const b = symbols[Math.floor(Math.random()*4)];
-  const c = symbols[Math.floor(Math.random()*4)];
+  const rewards=[0,5,10,20,50,100];
 
-  let msg = `${a} ${b} ${c}`;
+  let spin = Math.floor(Math.random()*360 + 720);
 
-  if(a === b && b === c) {
-    clicks += 100;
-    msg += " JACKPOT +100!";
-  } else if(a === b || b === c || a === c) {
-    clicks += 25;
-    msg += " WIN +25!";
+  wheel.style.transform = `rotate(${spin}deg)`;
+
+  setTimeout(()=>{
+
+    let reward = rewards[Math.floor(Math.random()*rewards.length)];
+    clicks += reward;
+
+    result.innerText = "WHEEL WIN: +" + reward;
+
+    update();
+
+  },2000);
+}
+
+// COIN FLIP ANIMATION
+function coinFlip(){
+  if(clicks < 5){
+    result.innerText="Not enough clicks!";
+    return;
   }
-
-  result.innerText = msg;
-  updateScore();
-};
-
-// COIN FLIP
-document.getElementById("coinButton").onclick = () => {
-  if(clicks < 5) return result.innerText = "Not enough clicks!";
 
   clicks -= 5;
 
-  const win = Math.random() < 0.5;
+  let coin = document.createElement("div");
+  coin.innerText="🪙";
+  coin.style.position="absolute";
+  coin.style.fontSize="50px";
+  coin.style.left="50%";
+  coin.style.top="50%";
+  document.body.appendChild(coin);
 
-  if(win) {
-    clicks += 15;
-    result.innerText = "HEADS — WIN +15!";
-  } else {
-    result.innerText = "TAILS — you lost!";
+  let flips = 0;
+
+  let anim = setInterval(()=>{
+    coin.style.transform = `rotateY(${flips}deg)`;
+    flips += 30;
+  },50);
+
+  setTimeout(()=>{
+    clearInterval(anim);
+
+    let win = Math.random() < 0.5;
+
+    if(win){
+      clicks += 15;
+      result.innerText="COIN: WIN +15!";
+    } else {
+      result.innerText="COIN: LOST";
+    }
+
+    coin.remove();
+    update();
+
+  },1200);
+}
+
+// BLACKJACK SYSTEM
+function startBJ(){
+  if(clicks < 20){
+    result.innerText="Not enough clicks!";
+    return;
   }
-
-  updateScore();
-};
-
-// BLACKJACK (simple)
-document.getElementById("blackjackButton").onclick = () => {
-  if(clicks < 20) return result.innerText = "Not enough clicks!";
 
   clicks -= 20;
 
-  const player = Math.floor(Math.random()*11) + 10;
-  const dealer = Math.floor(Math.random()*11) + 10;
+  bjPlayer = randomCard() + randomCard();
+  bjDealer = randomCard();
 
-  let msg = `You: ${player} | Dealer: ${dealer} `;
+  bjActive = true;
 
-  if(player > dealer) {
-    clicks += 50;
-    msg += "YOU WIN +50!";
-  } else if(player === dealer) {
-    clicks += 10;
-    msg += "DRAW +10!";
-  } else {
-    msg += "YOU LOST!";
+  document.getElementById("bjText").innerText =
+    "Player: " + bjPlayer + " | Dealer: " + bjDealer;
+}
+
+function hitBJ(){
+  if(!bjActive) return;
+
+  bjPlayer += randomCard();
+
+  document.getElementById("bjText").innerText =
+    "Player: " + bjPlayer + " | Dealer: " + bjDealer;
+
+  if(bjPlayer > 21){
+    result.innerText="BUST!";
+    bjActive=false;
+  }
+}
+
+function standBJ(){
+  if(!bjActive) return;
+
+  while(bjDealer < 17){
+    bjDealer += randomCard();
   }
 
-  result.innerText = msg;
-  updateScore();
-};
+  let msg="Player: "+bjPlayer+" Dealer: "+bjDealer+" ";
 
-// BOOST SPIN (2x clicks)
-document.getElementById("boostButton").onclick = () => {
-  if(clicks < 15) return result.innerText = "Not enough clicks!";
+  if(bjPlayer > 21 || (bjDealer <= 21 && bjDealer > bjPlayer)){
+    msg+="YOU LOST";
+  } else {
+    clicks += 50;
+    msg+="YOU WIN +50!";
+  }
 
-  clicks -= 15;
-  multiplier = 2;
-  boostActive = true;
+  result.innerText=msg;
+  bjActive=false;
+  update();
+}
 
-  result.innerText = "2x BOOST ACTIVE FOR 30 SECONDS!";
+function randomCard(){
+  return Math.floor(Math.random()*10)+1;
+}
 
-  setTimeout(() => {
-    multiplier = 1;
-    boostActive = false;
-    result.innerText = "BOOST ENDED";
-  }, 30000);
+update();
 
-  updateScore();
-};
-
-updateScore();
 </script>
 
 </body>
