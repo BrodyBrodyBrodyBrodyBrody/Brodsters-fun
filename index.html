@@ -1,146 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Ball Toss Game</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background: #0f172a;
-      color: white;
-      font-family: Arial;
-      text-align: center;
-    }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 18px;
-    }
-    canvas {
-      display: block;
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>Emoji Physics Skill Levels</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial;
+    background: linear-gradient(#87ceeb, #eaf7ff);
+  }
+  canvas { display: block; margin: auto; }
+  #hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.85);
+    padding: 10px;
+    border-radius: 10px;
+  }
+</style>
 </head>
 <body>
-
-<div id="ui">
-  <div>Combo: <span id="combo">0</span></div>
-  <div>Drag and release to throw!</div>
+<div id="hud">
+Score: <span id="score">0</span> 🎯 | Level: <span id="level">1</span>
 </div>
-
-<canvas id="game"></canvas>
+<canvas id="game" width="900" height="500"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const levelEl = document.getElementById("level");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+let score = 0;
+let levelIndex = 0;
+
+const ballTypes = [
+  {emoji:"🏀", g:0.35, bounce:0.75},
+  {emoji:"🧶", g:0.25, bounce:0.55},
+  {emoji:"⚽", g:0.33, bounce:0.80},
+  {emoji:"🟤", g:0.45, bounce:0.35},
+  {emoji:"🎾", g:0.30, bounce:0.85}
+];
 
 let ball = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-  vx: 0,
-  vy: 0,
-  r: 18
+  x:150,y:350,vx:0,vy:0,r:12,
+  dragging:false,active:false,
+  startX:150,startY:350,
+  type:ballTypes[0]
 };
 
-let gravity = 0.5;
-let friction = 0.99;
-let combo = 0;
+let walls = [];
+let targets = [];
 
-let dragging = false;
-let startX, startY;
+const levels = [
+  {
+    walls:[{x:450,y:300,w:120,h:30},{x:600,y:200,w:120,h:30}],
+    targets:[{x:700,y:420,r:18,emoji:"🎯"},{x:780,y:380,r:18,emoji:"🎯"}]
+  },
+  {
+    walls:[{x:400,y:350,w:140,h:30},{x:550,y:250,w:140,h:30},{x:700,y:150,w:140,h:30}],
+    targets:[{x:760,y:420,r:18,emoji:"🎯"},{x:820,y:360,r:18,emoji:"🎯"},{x:780,y:300,r:18,emoji:"🎯"}]
+  },
+  {
+    walls:[{x:350,y:380,w:180,h:30},{x:550,y:300,w:180,h:30},{x:750,y:220,w:120,h:30}],
+    targets:[{x:720,y:420,r:18,emoji:"🎯"},{x:820,y:420,r:18,emoji:"🎯"},{x:770,y:260,r:18,emoji:"🎯"}]
+  }
+];
 
-function resetBall() {
-  ball.x = canvas.width / 2;
-  ball.y = canvas.height / 2;
-  ball.vx = 0;
-  ball.vy = 0;
+function loadLevel(i){
+  let L = levels[i];
+  walls = JSON.parse(JSON.stringify(L.walls));
+  targets = JSON.parse(JSON.stringify(L.targets.map(t=>({...t,alive:true}))));
+  levelEl.textContent = i+1;
+  resetBall();
 }
 
-canvas.addEventListener("mousedown", (e) => {
-  dragging = true;
-  startX = e.clientX;
-  startY = e.clientY;
+function resetBall(){
+  ball.x=ball.startX;
+  ball.y=ball.startY;
+  ball.vx=0;
+  ball.vy=0;
+  ball.active=false;
+  ball.type = ballTypes[Math.floor(Math.random()*ballTypes.length)];
+}
+
+loadLevel(levelIndex);
+
+canvas.addEventListener("mousedown",e=>{
+  let dx=e.offsetX-ball.x;
+  let dy=e.offsetY-ball.y;
+  if(Math.hypot(dx,dy)<25) ball.dragging=true;
 });
 
-canvas.addEventListener("mouseup", (e) => {
-  if (!dragging) return;
-  dragging = false;
-
-  let dx = e.clientX - startX;
-  let dy = e.clientY - startY;
-
-  ball.vx = dx * 0.2;
-  ball.vy = dy * 0.2;
-
-  combo = 0;
-  document.getElementById("combo").innerText = combo;
+canvas.addEventListener("mousemove",e=>{
+  if(ball.dragging){
+    ball.x=e.offsetX;
+    ball.y=e.offsetY;
+  }
 });
 
-function update() {
-  if (!dragging) {
-    ball.vy += gravity;
-    ball.x += ball.vx;
-    ball.y += ball.vy;
+canvas.addEventListener("mouseup",e=>{
+  if(ball.dragging){
+    ball.vx=(ball.startX-ball.x)*0.18;
+    ball.vy=(ball.startY-ball.y)*0.18;
+    ball.active=true;
+    ball.dragging=false;
+  }
+});
 
-    ball.vx *= friction;
-    ball.vy *= friction;
+function collideWalls(){
+  for(let w of walls){
 
-    // floor
-    if (ball.y + ball.r > canvas.height) {
-      ball.y = canvas.height - ball.r;
-      ball.vy *= -0.8;
-      combo++;
-      document.getElementById("combo").innerText = combo;
-    }
+    let closestX = Math.max(w.x, Math.min(ball.x, w.x + w.w));
+    let closestY = Math.max(w.y, Math.min(ball.y, w.y + w.h));
 
-    // ceiling
-    if (ball.y - ball.r < 0) {
-      ball.y = ball.r;
-      ball.vy *= -0.8;
-    }
+    let dx = ball.x - closestX;
+    let dy = ball.y - closestY;
 
-    // walls
-    if (ball.x + ball.r > canvas.width) {
-      ball.x = canvas.width - ball.r;
-      ball.vx *= -0.8;
-    }
+    if(Math.hypot(dx,dy) < ball.r){
 
-    if (ball.x - ball.r < 0) {
-      ball.x = ball.r;
-      ball.vx *= -0.8;
+      // resolve smallest overlap axis
+      if(Math.abs(dx) > Math.abs(dy)){
+        ball.vx *= -0.8;
+        ball.x += dx > 0 ? 2 : -2;
+      } else {
+        ball.vy *= -0.8;
+        ball.y += dy > 0 ? 2 : -2;
+      }
     }
   }
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function drawTrajectory(){
+  let px = ball.x;
+  let py = ball.y;
+  let vx = (ball.startX - ball.x) * 0.18;
+  let vy = (ball.startY - ball.y) * 0.18;
 
-  // ball
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-  ctx.fillStyle = "#38bdf8";
-  ctx.fill();
-  ctx.closePath();
+  ctx.fillStyle="rgba(0,0,0,0.6)";
 
-  // shadow glow
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.r + 10, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(56,189,248,0.2)";
-  ctx.stroke();
+  for(let i=0;i<40;i++){
+    vy += ball.type.g;
+    px += vx;
+    py += vy;
+
+    if(py > canvas.height-10){
+      py = canvas.height-10;
+      vy *= -ball.type.bounce;
+    }
+
+    if(i % 2 === 0) ctx.fillText("•", px, py);
+  }
 }
 
-function loop() {
+function update(){
+  if(ball.active){
+    ball.vy += ball.type.g;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    collideWalls();
+
+    if(ball.y > canvas.height - ball.r){
+      ball.y = canvas.height - ball.r;
+      ball.vy *= -ball.type.bounce;
+      ball.vx *= 0.85;
+      if(Math.abs(ball.vy)<1.2) resetBall();
+    }
+
+    if(ball.x<ball.r || ball.x>canvas.width-ball.r){
+      ball.vx *= -0.8;
+    }
+  }
+
+  let aliveTargets = 0;
+
+  for(let t of targets){
+    if(!t.alive) continue;
+    aliveTargets++;
+
+    if(Math.hypot(ball.x-t.x,ball.y-t.y)<t.r+ball.r){
+      t.alive=false;
+      score += 10;
+      scoreEl.textContent = score;
+    }
+  }
+
+  if(aliveTargets===0){
+    levelIndex++;
+    if(levelIndex>=levels.length){
+      alert("YOU BEAT ALL LEVELS! 🎉");
+      levelIndex=0;
+      score=0;
+    }
+    loadLevel(levelIndex);
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="#444";
+  ctx.fillRect(0,canvas.height-10,canvas.width,10);
+
+  ctx.fillStyle="#777";
+  for(let w of walls){
+    ctx.fillRect(w.x,w.y,w.w,w.h);
+  }
+
+  if(ball.dragging){
+    drawTrajectory();
+    ctx.beginPath();
+    ctx.moveTo(ball.startX,ball.startY);
+    ctx.lineTo(ball.x,ball.y);
+    ctx.stroke();
+  }
+
+  ctx.font="22px Arial";
+  ctx.fillText(ball.type.emoji,ball.x,ball.y);
+
+  // targets always visible and on-screen by design
+  for(let t of targets){
+    if(t.alive) ctx.fillText(t.emoji,t.x,t.y);
+  }
+}
+
+function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
 }
-
 loop();
 </script>
-
 </body>
 </html>
