@@ -1,303 +1,298 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Brody Clicking Money Simulator</title>
+<title>BrodyBrodyBrodySimulator</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      text-align: center;
-      background: linear-gradient(to bottom, #1e3c72, #2a5298);
-      color: white;
-      overflow-x: hidden;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  text-align: center;
+  background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+  color: white;
+}
 
-    h1 {
-      margin-top: 15px;
-      font-size: 40px;
-    }
+#loading {
+  position: fixed;
+  inset: 0;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 9999;
+  flex-direction: column;
+}
 
-    #score {
-      font-size: 28px;
-      margin: 10px;
-    }
+button {
+  margin: 5px;
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
 
-    button {
-      cursor: pointer;
-      border: none;
-      border-radius: 12px;
-      padding: 12px 20px;
-      margin: 5px;
-      font-size: 16px;
-    }
+.tab { display: none; }
+.active { display: block; }
 
-    #clickButton {
-      font-size: 26px;
-      padding: 20px 45px;
-      background: gold;
-      color: black;
-      border-radius: 20px;
-      box-shadow: 0 8px orange;
-    }
+.casinoArea { display: none; }
 
-    #clickButton:active {
-      transform: translateY(5px);
-    }
-
-    .panel {
-      margin-top: 20px;
-    }
-
-    #wheel {
-      margin: 20px auto;
-      width: 200px;
-      height: 200px;
-      border-radius: 50%;
-      border: 6px solid white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 40px;
-      background: conic-gradient(red, yellow, lime, cyan, magenta, red);
-      transition: transform 2s cubic-bezier(0.2, 0.9, 0.3, 1);
-    }
-
-    #result {
-      margin-top: 15px;
-      font-size: 20px;
-      min-height: 25px;
-    }
-
-    .particle {
-      position: absolute;
-      font-size: 18px;
-      font-weight: bold;
-      pointer-events: none;
-    }
-
-    #blackjackBox {
-      margin-top: 20px;
-      padding: 10px;
-      border: 1px solid white;
-      display: inline-block;
-      border-radius: 10px;
-    }
-
-    .hidden {
-      display: none;
-    }
-  </style>
+#wheel {
+  width: 150px;
+  height: 150px;
+  margin: auto;
+  border-radius: 50%;
+  background: conic-gradient(red,yellow,green,cyan,magenta,red);
+  transition: transform 1.8s ease;
+}
+</style>
 </head>
 
 <body>
 
-<h1>🎰 Brody Casino Simulator 🎰</h1>
+<div id="loading">
+  Loading Casino...
+  <div id="loadText">Starting...</div>
+</div>
+
+<h1>🎰 AAA Casino Clicker</h1>
 
 <div id="score">Clicks: 0</div>
 
-<button id="clickButton">CLICK</button>
+<button onclick="clicker()">CLICK</button>
 
-<div class="panel">
+<hr>
 
-  <h2>🎡 Spin Wheel</h2>
-  <div id="wheel">?</div>
-  <button onclick="spinWheel()">SPIN (10 clicks)</button>
+<button onclick="openTab('casino')">Casino</button>
+<button onclick="openTab('pets')">Pets</button>
 
-  <h2>🪙 Coin Flip</h2>
-  <button onclick="coinFlip()">FLIP (5 clicks)</button>
+<div id="casino" class="tab active">
 
-  <h2>🃏 Blackjack</h2>
+  <h2>Casino Room</h2>
 
-  <div id="blackjackBox">
-    <div id="bjText">Click Start</div>
-    <button onclick="startBJ()">Start</button>
-    <button onclick="hitBJ()">Hit</button>
-    <button onclick="standBJ()">Stand</button>
+  <button onclick="openGame('wheel')">Wheel</button>
+  <button onclick="openGame('coin')">Coin</button>
+  <button onclick="openGame('blackjack')">Blackjack</button>
+
+  <div id="wheel" class="casinoArea">
+    <h3>Wheel</h3>
+    <div id="wheelUI"></div>
+    <button onclick="spinWheel()">Spin (10)</button>
+    <div id="wheelLog"></div>
   </div>
 
-  <div id="result"></div>
+  <div id="coin" class="casinoArea">
+    <h3>Coin</h3>
+    <button onclick="coinFlip()">Flip (5)</button>
+    <div id="coinLog"></div>
+  </div>
 
+  <div id="blackjack" class="casinoArea">
+    <h3>Blackjack</h3>
+
+    <div>Player: <span id="player"></span></div>
+    <div>Dealer: <span id="dealer"></span></div>
+
+    <button onclick="bjStart()">Start</button>
+    <button onclick="bjHit()">Hit</button>
+    <button onclick="bjStand()">Stand</button>
+
+    <div id="bjLog"></div>
+  </div>
+
+</div>
+
+<div id="pets" class="tab">
+  <h2>Pets</h2>
+  <p>🐶 Dog (+1/sec)</p>
+  <button onclick="buyPet(50,1)">Buy 50 clicks</button>
+
+  <p>🐱 Cat (+3/sec)</p>
+  <button onclick="buyPet(150,3)">Buy 150 clicks</button>
 </div>
 
 <script>
 
 let clicks = 0;
-let multiplier = 1;
+let pets = 0;
 
-let bjPlayer = 0;
-let bjDealer = 0;
-let bjActive = false;
+let bjP = 0;
+let bjD = 0;
+let bjOn = false;
 
-const score = document.getElementById("score");
-const result = document.getElementById("result");
-const wheel = document.getElementById("wheel");
+const el = {
+  score: document.getElementById("score"),
+  loading: document.getElementById("loading"),
+  loadText: document.getElementById("loadText"),
+  player: document.getElementById("player"),
+  dealer: document.getElementById("dealer"),
+  wheel: document.getElementById("wheelUI"),
+  wheelLog: document.getElementById("wheelLog"),
+  coinLog: document.getElementById("coinLog"),
+  bjLog: document.getElementById("bjLog")
+};
 
-function update() {
-  score.innerText = "Clicks: " + clicks;
+// SAFE SAVE
+function save(){
+  localStorage.setItem("c",clicks);
+  localStorage.setItem("p",pets);
 }
 
-function particles(x,y,text) {
-  for(let i=0;i<6;i++){
-    const p=document.createElement("div");
-    p.className="particle";
-    p.innerText=text;
-    document.body.appendChild(p);
+function load(){
+  clicks = Number(localStorage.getItem("c")) || 0;
+  pets = Number(localStorage.getItem("p")) || 0;
+}
 
-    let dx=(Math.random()-0.5)*8;
-    let dy=-Math.random()*6;
-    let px=x,py=y;
-    let o=1;
-
-    const t=setInterval(()=>{
-      px+=dx;
-      py+=dy;
-      dy+=0.25;
-      o-=0.03;
-
-      p.style.left=px+"px";
-      p.style.top=py+"px";
-      p.style.opacity=o;
-
-      if(o<=0){clearInterval(t);p.remove();}
-    },16);
-  }
+// UPDATE SAFE
+function update(){
+  el.score.innerText = "Clicks: " + clicks;
+  save();
 }
 
 // CLICK
-document.getElementById("clickButton").onclick = (e) => {
-  clicks += multiplier;
+function clicker(){
+  clicks++;
   update();
-  particles(e.clientX,e.clientY,"+"+multiplier);
-};
+}
 
-// SPIN WHEEL (ANIMATED)
+// TABS SAFE
+function openTab(id){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function openGame(id){
+  document.querySelectorAll(".casinoArea").forEach(g=>g.style.display="none");
+  const e = document.getElementById(id);
+  if(e) e.style.display="block";
+}
+
+// WHEEL
 function spinWheel(){
-  if(clicks < 10){
-    result.innerText="Not enough clicks!";
-    return;
-  }
+  if(clicks < 10) return;
 
   clicks -= 10;
 
-  const rewards=[0,5,10,20,50,100];
-
-  let spin = Math.floor(Math.random()*360 + 720);
-
-  wheel.style.transform = `rotate(${spin}deg)`;
+  let rot = Math.random()*720 + 360;
+  el.wheel.style.transform = "rotate("+rot+"deg)";
 
   setTimeout(()=>{
+    let win = [0,5,10,20,50][Math.floor(Math.random()*5)];
+    clicks += win;
 
-    let reward = rewards[Math.floor(Math.random()*rewards.length)];
-    clicks += reward;
-
-    result.innerText = "WHEEL WIN: +" + reward;
+    el.wheelLog.innerHTML = "+"+win+"<br>"+el.wheelLog.innerHTML;
 
     update();
-
-  },2000);
+  },1500);
 }
 
-// COIN FLIP ANIMATION
+// COIN
 function coinFlip(){
-  if(clicks < 5){
-    result.innerText="Not enough clicks!";
-    return;
-  }
+  if(clicks < 5) return;
 
   clicks -= 5;
 
-  let coin = document.createElement("div");
-  coin.innerText="🪙";
-  coin.style.position="absolute";
-  coin.style.fontSize="50px";
-  coin.style.left="50%";
-  coin.style.top="50%";
-  document.body.appendChild(coin);
+  let win = Math.random()<0.5;
 
-  let flips = 0;
-
-  let anim = setInterval(()=>{
-    coin.style.transform = `rotateY(${flips}deg)`;
-    flips += 30;
-  },50);
-
-  setTimeout(()=>{
-    clearInterval(anim);
-
-    let win = Math.random() < 0.5;
-
-    if(win){
-      clicks += 15;
-      result.innerText="COIN: WIN +15!";
-    } else {
-      result.innerText="COIN: LOST";
-    }
-
-    coin.remove();
-    update();
-
-  },1200);
-}
-
-// BLACKJACK SYSTEM
-function startBJ(){
-  if(clicks < 20){
-    result.innerText="Not enough clicks!";
-    return;
-  }
-
-  clicks -= 20;
-
-  bjPlayer = randomCard() + randomCard();
-  bjDealer = randomCard();
-
-  bjActive = true;
-
-  document.getElementById("bjText").innerText =
-    "Player: " + bjPlayer + " | Dealer: " + bjDealer;
-}
-
-function hitBJ(){
-  if(!bjActive) return;
-
-  bjPlayer += randomCard();
-
-  document.getElementById("bjText").innerText =
-    "Player: " + bjPlayer + " | Dealer: " + bjDealer;
-
-  if(bjPlayer > 21){
-    result.innerText="BUST!";
-    bjActive=false;
-  }
-}
-
-function standBJ(){
-  if(!bjActive) return;
-
-  while(bjDealer < 17){
-    bjDealer += randomCard();
-  }
-
-  let msg="Player: "+bjPlayer+" Dealer: "+bjDealer+" ";
-
-  if(bjPlayer > 21 || (bjDealer <= 21 && bjDealer > bjPlayer)){
-    msg+="YOU LOST";
+  if(win){
+    clicks += 15;
+    el.coinLog.innerHTML = "WIN +15<br>"+el.coinLog.innerHTML;
   } else {
-    clicks += 50;
-    msg+="YOU WIN +50!";
+    el.coinLog.innerHTML = "LOSS<br>"+el.coinLog.innerHTML;
   }
 
-  result.innerText=msg;
-  bjActive=false;
   update();
 }
 
-function randomCard(){
+// BLACKJACK FIXED
+function bjStart(){
+  if(clicks < 20) return;
+
+  clicks -= 20;
+
+  bjP = r()+r();
+  bjD = r();
+
+  bjOn = true;
+
+  render();
+  check();
+  update();
+}
+
+function bjHit(){
+  if(!bjOn) return;
+
+  bjP += r();
+  render();
+  check();
+}
+
+function bjStand(){
+  if(!bjOn) return;
+
+  while(bjD < 17) bjD += r();
+
+  finish();
+}
+
+function check(){
+  if(bjP > 21){
+    log("BUST LOSE");
+    bjOn = false;
+  }
+}
+
+function finish(){
+  let msg;
+
+  if(bjP <= 21 && (bjP > bjD || bjD > 21)){
+    clicks += 50;
+    msg = "WIN +50";
+  } else {
+    msg = "LOSE";
+  }
+
+  log(msg);
+  bjOn = false;
+  update();
+}
+
+function render(){
+  el.player.innerText = bjP;
+  el.dealer.innerText = bjD;
+}
+
+function log(t){
+  el.bjLog.innerHTML = t + "<br>" + el.bjLog.innerHTML;
+}
+
+function r(){
   return Math.floor(Math.random()*10)+1;
 }
 
-update();
+// PETS
+function buyPet(cost, gain){
+  if(clicks >= cost){
+    clicks -= cost;
+    pets += gain;
+    update();
+  }
+}
+
+// AUTO PETS
+setInterval(()=>{
+  clicks += pets;
+  update();
+},1000);
+
+// INIT SAFE
+window.onload = () => {
+  load();
+  update();
+
+  el.loading.style.display = "none";
+};
 
 </script>
 
