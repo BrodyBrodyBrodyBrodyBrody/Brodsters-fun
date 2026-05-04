@@ -1,10 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Website</title>
+  <title>Brody Clicker Simulator</title>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #87ceeb, #ffffff);
+      font-family: Arial;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 50px;
+    }
+
+    #score {
+      font-size: 35px;
+      margin-bottom: 20px;
+    }
+
+    #clickButton {
+      padding: 25px 50px;
+      font-size: 30px;
+      border: none;
+      border-radius: 20px;
+      background: gold;
+      cursor: pointer;
+      transition: 0.1s;
+      box-shadow: 0 8px 0 orange;
+    }
+
+    #clickButton:active {
+      transform: translateY(8px);
+      box-shadow: 0 0 0 orange;
+    }
+
+    .particle {
+      position: absolute;
+      font-size: 25px;
+      font-weight: bold;
+      pointer-events: none;
+      user-select: none;
+    }
+  </style>
 </head>
-<body style="font-family:Arial;text-align:center;margin-top:50px;">
-  <h1>Hello Brody</h1>
-  <p>I made my first website on GitHub!</p>
+
+<body>
+
+  <h1>🔥 Brody Clicker Simulator 🔥</h1>
+
+  <div id="score">Clicks: 0</div>
+
+  <button id="clickButton">CLICK!</button>
+
+  <script>
+    let clicks = 0;
+
+    const button = document.getElementById("clickButton");
+    const scoreText = document.getElementById("score");
+
+    button.addEventListener("click", function(event) {
+
+      clicks++;
+      scoreText.innerText = "Clicks: " + clicks;
+
+      // random button bounce
+      button.style.transform =
+        "scale(" + (1 + Math.random() * 0.15) + ")";
+
+      setTimeout(() => {
+        button.style.transform = "scale(1)";
+      }, 100);
+
+      // create floating particles
+      for(let i = 0; i < 6; i++) {
+
+        const particle = document.createElement("div");
+        particle.className = "particle";
+        particle.innerText = "+1";
+
+        document.body.appendChild(particle);
+
+        let x = event.clientX;
+        let y = event.clientY;
+
+        particle.style.left = x + "px";
+        particle.style.top = y + "px";
+
+        let dx = (Math.random() - 0.5) * 6;
+        let dy = -Math.random() * 6 - 2;
+
+        let opacity = 1;
+
+        const interval = setInterval(() => {
+
+          x += dx;
+          y += dy;
+
+          dy += 0.15;
+
+          opacity -= 0.02;
+
+          particle.style.left = x + "px";
+          particle.style.top = y + "px";
+          particle.style.opacity = opacity;
+
+          if(opacity <= 0) {
+            clearInterval(interval);
+            particle.remove();
+          }
+
+        }, 16);
+      }
+
+    });
+  </script>
+
 </body>
 </html>
